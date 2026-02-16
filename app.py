@@ -204,6 +204,36 @@ def api_signal_history():
     return jsonify({'history': history, 'count': len(history)})
 
 
+@app.route('/api/bet-suggestion')
+def api_bet_suggestion():
+    """
+    Returns the final output for a bet suggestion,
+    including up/down attribute counts and current Polymarket line.
+    """
+    with _cache_lock:
+        data = _cache['dashboard_data']
+
+    if data is None:
+        return jsonify({'error': 'Data not yet available. Please wait for first refresh.'}), 503
+
+    up_attributes = 0
+    down_attributes = 0
+    signals = data.get('signals', {})
+    for signal_name, signal_data in signals.items():
+        if signal_data.get('signal') == 'UP':
+            up_attributes += 1
+        elif signal_data.get('signal') == 'DOWN':
+            down_attributes += 1
+
+    return jsonify({
+        'final_signal': data.get('final_signal'),
+        'up_attributes_count': up_attributes,
+        'down_attributes_count': down_attributes,
+        'polymarket_line': data.get('polymarket'),
+        'timestamp': data.get('timestamp')
+    })
+
+
 @app.route('/')
 def index():
     """Serve the dashboard frontend."""
