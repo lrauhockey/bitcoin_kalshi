@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BTC Dashboard — Ascetic0x</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0b0e11;
+            --bg-card: #141821;
+            --bg-card-hover: #1a1f2e;
+            --border: #1e2433;
+            --text-primary: #eaecef;
+            --text-secondary: #848e9c;
+            --text-muted: #5e6673;
+            --accent: #f7931a;
+            --green: #0ecb81;
+            --green-bg: #0ecb8115;
+            --red: #f6465d;
+            --red-bg: #f6465d15;
+            --yellow: #fcd535;
+            --yellow-bg: #fcd53515;
+            --blue: #1e90ff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .logo { color: var(--accent); font-size: 1.2em; font-weight: 700; letter-spacing: -0.5px; }
+        .header-price {
+            font-size: 1.5em;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .header-right { display: flex; align-items: center; gap: 16px; }
+        .status-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--green);
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .status-text { color: var(--text-muted); font-size: 0.8em; }
+
+        /* Main layout */
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 12px;
+            padding: 16px 24px;
+            max-width: 1440px;
+            margin: 0 auto;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            transition: border-color 0.2s;
+        }
+        .card:hover { border-color: #2a3040; }
+        .card-title {
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        /* Signal Hero */
+        .signal-hero {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 32px;
+        }
+        .signal-main { display: flex; align-items: center; gap: 24px; }
+        .signal-badge {
+            font-size: 2em;
+            font-weight: 800;
+            padding: 8px 32px;
+            border-radius: 12px;
+            letter-spacing: 2px;
+        }
+        .signal-badge.up { background: var(--green-bg); color: var(--green); border: 2px solid var(--green); }
+        .signal-badge.down { background: var(--red-bg); color: var(--red); border: 2px solid var(--red); }
+        .signal-badge.skip { background: var(--yellow-bg); color: var(--yellow); border: 2px solid var(--yellow); }
+        .signal-meta { display: flex; flex-direction: column; gap: 4px; }
+        .signal-confidence { font-size: 1.1em; color: var(--text-secondary); }
+        .signal-counts { font-size: 0.85em; color: var(--text-muted); }
+        .signal-polymarket { text-align: right; }
+        .pm-question { font-size: 0.8em; color: var(--text-muted); max-width: 280px; margin-bottom: 8px; }
+        .pm-odds { display: flex; gap: 12px; justify-content: flex-end; }
+        .pm-chip {
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.95em;
+        }
+        .pm-chip.up { background: var(--green-bg); color: var(--green); }
+        .pm-chip.down { background: var(--red-bg); color: var(--red); }
+
+        /* Signal breakdown */
+        .signal-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            gap: 10px;
+        }
+        .signal-row:last-child { border-bottom: none; }
+        .signal-dot {
+            width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+        }
+        .signal-dot.bullish { background: var(--green); }
+        .signal-dot.bearish { background: var(--red); }
+        .signal-dot.neutral { background: var(--text-muted); }
+        .signal-name { font-size: 0.9em; font-weight: 500; width: 120px; text-transform: capitalize; }
+        .signal-detail { font-size: 0.8em; color: var(--text-secondary); flex: 1; }
+        .signal-label { font-size: 0.75em; font-weight: 600; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; }
+        .signal-label.bullish { background: var(--green-bg); color: var(--green); }
+        .signal-label.bearish { background: var(--red-bg); color: var(--red); }
+        .signal-label.neutral { background: #5e667315; color: var(--text-muted); }
+
+        /* Chart containers */
+        .chart-container { position: relative; width: 100%; }
+        .chart-container.medium { height: 200px; }
+        .chart-container.small { height: 160px; }
+
+        /* Data rows */
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9em;
+        }
+        .data-row:last-child { border-bottom: none; }
+        .data-label { color: var(--text-secondary); }
+        .data-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+        /* Liquidation bar */
+        .liq-visual { margin: 12px 0 8px; }
+        .liq-bar-outer {
+            display: flex;
+            height: 28px;
+            border-radius: 6px;
+            overflow: hidden;
+            background: var(--border);
+        }
+        .liq-bar-long { background: linear-gradient(90deg, #0ecb81, #0ecb81aa); transition: width 0.5s; }
+        .liq-bar-short { background: linear-gradient(90deg, #f6465daa, #f6465d); transition: width 0.5s; }
+        .liq-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75em;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* News */
+        .news-card { grid-column: 1 / -1; }
+        .news-sentiment-bar {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: var(--bg-primary);
+            border-radius: 8px;
+        }
+        .news-sentiment-label { font-weight: 700; font-size: 0.85em; }
+        .news-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .news-item {
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: var(--bg-primary);
+            border-left: 3px solid var(--text-muted);
+            transition: background 0.2s;
+        }
+        .news-item:hover { background: var(--bg-card-hover); }
+        .news-item.bullish { border-left-color: var(--green); }
+        .news-item.bearish { border-left-color: var(--red); }
+        .news-title { font-size: 0.85em; line-height: 1.4; }
+        .news-title a { color: var(--text-primary); text-decoration: none; }
+        .news-title a:hover { color: var(--accent); }
+        .news-meta { font-size: 0.7em; color: var(--text-muted); margin-top: 4px; }
+
+        /* Signal history timeline */
+        .history-track {
+            display: flex;
+            gap: 4px;
+            align-items: flex-end;
+            height: 40px;
+            padding: 4px 0;
+            overflow-x: auto;
+        }
+        .history-bar {
+            width: 12px;
+            min-height: 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+            transition: height 0.3s;
+        }
+        .history-bar.up { background: var(--green); }
+        .history-bar.down { background: var(--red); }
+        .history-bar.skip { background: var(--text-muted); }
+
+        /* Odds value callout */
+        .odds-callout {
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85em;
+        }
+        .odds-callout.good { background: var(--green-bg); color: var(--green); border: 1px solid var(--green); }
+        .odds-callout.bad { background: var(--red-bg); color: var(--text-muted); border: 1px solid var(--border); }
+
+        /* Loading */
+        .loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            color: var(--text-muted);
+            gap: 16px;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+            .main { grid-template-columns: 1fr; padding: 12px; }
+            .signal-hero { flex-direction: column; gap: 16px; text-align: center; }
+            .signal-polymarket { text-align: center; }
+            .pm-odds { justify-content: center; }
+            .news-grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <span class="logo">ASCETIC0x</span>
+            <span class="header-price" id="header-price">--</span>
+        </div>
+        <div class="header-right">
+            <span class="status-dot" id="status-dot"></span>
+            <span class="status-text" id="status-text">Connecting...</span>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="app">
+        <div class="loading-screen">
+            <div class="spinner"></div>
+            <div>Loading dashboard data...</div>
+            <div style="font-size:0.8em">First refresh may take up to 45 seconds</div>
+        </div>
+    </div>
+
+    <script>
+        const REFRESH_MS = 8000;
+        let charts = {};
+
+        // --- Formatters ---
+        function fmtUSD(n) {
+            if (n == null) return '--';
+            return '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+        function fmtCompact(n) {
+            if (n == null) return '--';
+            if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+            if (n >= 1e6) return '$' + (n/1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+            return '$' + n.toFixed(0);
+        }
+        function fmtTime(ts) {
+            return new Date(ts * 1000).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        }
+        function fmtDate(ts) {
+            return new Date(ts * 1000).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+        }
+
+        // --- Main Render ---
+        function renderDashboard(resp) {
+            const d = resp.data;
+            if (!d) return;
+
+            const sig = d.final_signal || {};
+            const dir = (sig.direction || 'SKIP').toUpperCase();
+            const dirClass = dir === 'UP' ? 'up' : dir === 'DOWN' ? 'down' : 'skip';
+
+            // Header price
+            document.getElementById('header-price').textContent = fmtUSD(d.btc_price);
+
+            let html = '<div class="main">';
+
+            // === Signal Hero ===
+            html += `<div class="card signal-hero">
+                <div class="signal-main">
+                    <div class="signal-badge ${dirClass}">${dir}</div>
+                    <div class="signal-meta">
+                        <div class="signal-confidence">Confidence: ${((sig.confidence||0)*100).toFixed(0)}%</div>
+                        <div class="signal-counts">
+                            <span style="color:var(--green)">${sig.bullish_signals||0} bullish</span> /
+                            <span style="color:var(--red)">${sig.bearish_signals||0} bearish</span> /
+                            <span style="color:var(--text-muted)">${sig.neutral_signals||0} neutral</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="signal-polymarket">`;
+
+            const pm = d.polymarket;
+            if (pm && pm.outcomes) {
+                html += `<div class="pm-question">${pm.question || ''}</div>`;
+                html += '<div class="pm-odds">';
+                for (const [outcome, info] of Object.entries(pm.outcomes)) {
+                    const cls = outcome === 'Up' || outcome === 'Yes' ? 'up' : 'down';
+                    html += `<div class="pm-chip ${cls}">${outcome} $${(info.price||0).toFixed(2)}</div>`;
+                }
+                html += '</div>';
+            } else {
+                html += '<div class="pm-question">No active 15-min market</div>';
+            }
+
+            const ov = d.odds_value;
+            if (ov) {
+                const ovClass = ov.has_value ? 'good' : 'bad';
+                html += `<div class="odds-callout ${ovClass}">${ov.detail || ''}</div>`;
+            }
+            html += '</div></div>';
+
+            // === Signal Breakdown ===
+            html += '<div class="card"><div class="card-title">Signal Breakdown</div>';
+            if (d.signals) {
+                for (const [name, s] of Object.entries(d.signals)) {
+                    html += `<div class="signal-row">
+                        <div class="signal-dot ${s.signal}"></div>
+                        <div class="signal-name">${name.replace('_',' ')}</div>
+                        <div class="signal-detail">${s.detail || ''}</div>
+                        <div class="signal-label ${s.signal}">${s.signal}</div>
+                    </div>`;
+                }
+            }
+            html += '</div>';
+
+            // === Derivatives ===
+            const deriv = d.derivatives;
+            html += '<div class="card"><div class="card-title">Derivatives</div>';
+            if (deriv) {
+                const fr = deriv.funding;
+                if (fr && fr.current_rate != null) {
+                    const rateColor = fr.current_rate > 0.0001 ? 'var(--red)' : fr.current_rate < -0.0001 ? 'var(--green)' : 'var(--text-primary)';
+                    html += `<div class="data-row"><span class="data-label">Funding Rate</span><span class="data-value" style="color:${rateColor}">${(fr.current_rate*100).toFixed(4)}%</span></div>`;
+                }
+                const oi = deriv.open_interest;
+                if (oi) {
+                    html += `<div class="data-row"><span class="data-label">Open Interest</span><span class="data-value">${Number(oi.oi_btc).toLocaleString('en-US', {maximumFractionDigits:0})} BTC</span></div>`;
+                }
+                const ls = deriv.long_short_ratio;
+                if (ls && ls.current_ratio != null) {
+                    const longPct = (ls.current_ratio / (1 + ls.current_ratio) * 100).toFixed(1);
+                    const ratioColor = ls.current_ratio > 2.5 ? 'var(--red)' : ls.current_ratio < 0.7 ? 'var(--green)' : 'var(--text-primary)';
+                    html += `<div class="data-row"><span class="data-label">Long/Short Ratio</span><span class="data-value" style="color:${ratioColor}">${ls.current_ratio.toFixed(2)} (${longPct}% long)</span></div>`;
+                }
+            }
+            // Funding rate chart
+            html += '<div class="chart-container small"><canvas id="fundingChart"></canvas></div>';
+            html += '</div>';
+
+            // === Order Book ===
+            html += '<div class="card"><div class="card-title">Order Book Walls</div>';
+            const ws = d.wall_strength;
+            if (ws) {
+                html += `<div class="data-row"><span class="data-label">Mid Price</span><span class="data-value">${fmtUSD(ws.mid_price)}</span></div>`;
+                html += `<div class="data-row"><span class="data-label" style="color:var(--green)">Bid Wall</span><span class="data-value">${ws.bid_wall_volume.toFixed(2)} BTC</span></div>`;
+                html += `<div class="data-row"><span class="data-label" style="color:var(--red)">Ask Wall</span><span class="data-value">${ws.ask_wall_volume.toFixed(2)} BTC</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Ratio (Bid/Ask)</span><span class="data-value">${ws.wall_ratio.toFixed(2)}</span></div>`;
+            }
+            html += '<div class="chart-container small"><canvas id="wallChart"></canvas></div>';
+            html += '</div>';
+
+            // === Liquidations ===
+            html += '<div class="card"><div class="card-title">Liquidations</div>';
+            if (deriv && deriv.liquidations) {
+                const liq = deriv.liquidations;
+                const total = liq.total_usd || 1;
+                const longPct = (liq.long_liquidation_usd / total * 100);
+                const shortPct = 100 - longPct;
+                html += '<div class="liq-visual">';
+                html += `<div class="liq-bar-outer">
+                    <div class="liq-bar-long" style="width:${longPct.toFixed(1)}%"></div>
+                    <div class="liq-bar-short" style="width:${shortPct.toFixed(1)}%"></div>
+                </div>`;
+                html += `<div class="liq-labels"><span>Long ${longPct.toFixed(0)}%</span><span>Short ${shortPct.toFixed(0)}%</span></div>`;
+                html += '</div>';
+                html += `<div class="data-row"><span class="data-label" style="color:var(--green)">Long Liqs</span><span class="data-value">${fmtCompact(liq.long_liquidation_usd)} (${liq.long_count})</span></div>`;
+                html += `<div class="data-row"><span class="data-label" style="color:var(--red)">Short Liqs</span><span class="data-value">${fmtCompact(liq.short_liquidation_usd)} (${liq.short_count})</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Total</span><span class="data-value">${fmtCompact(liq.total_usd)}</span></div>`;
+            }
+            html += '<div class="chart-container small"><canvas id="liqChart"></canvas></div>';
+            html += '</div>';
+
+            // === Signal History ===
+            html += '<div class="card"><div class="card-title">Signal History</div>';
+            html += '<div class="history-track" id="history-track"></div>';
+            html += '<div class="chart-container small"><canvas id="priceHistoryChart"></canvas></div>';
+            html += '</div>';
+
+            // === News ===
+            html += '<div class="card news-card"><div class="card-title">News & Sentiment</div>';
+            const news = d.news;
+            if (news) {
+                const sentClass = news.overall_sentiment === 'bullish' ? 'var(--green)' : news.overall_sentiment === 'bearish' ? 'var(--red)' : 'var(--text-muted)';
+                html += `<div class="news-sentiment-bar">
+                    <span class="news-sentiment-label" style="color:${sentClass}">${(news.overall_sentiment||'neutral').toUpperCase()}</span>
+                    <span style="color:var(--text-muted);font-size:0.8em">Score: ${news.avg_score} |
+                        <span style="color:var(--green)">${news.bullish_count} bullish</span> /
+                        <span style="color:var(--red)">${news.bearish_count} bearish</span> /
+                        ${news.neutral_count} neutral
+                    </span>
+                </div>`;
+                if (news.headlines) {
+                    html += '<div class="news-grid">';
+                    for (const h of news.headlines.slice(0, 8)) {
+                        const sc = h.sentiment ? h.sentiment.label : 'neutral';
+                        html += `<div class="news-item ${sc}">
+                            <div class="news-title"><a href="${h.url}" target="_blank">${h.title}</a></div>
+                            <div class="news-meta">${h.source} &middot; ${fmtTime(h.published_at)}</div>
+                        </div>`;
+                    }
+                    html += '</div>';
+                }
+            }
+            html += '</div>';
+
+            html += '</div>'; // close main
+            document.getElementById('app').innerHTML = html;
+
+            // --- Render Charts ---
+            renderCharts(d);
+
+            // --- Status bar ---
+            document.getElementById('status-text').textContent =
+                `Updated ${fmtTime(d.timestamp)} | Cache: ${resp.cache_age_seconds}s`;
+        }
+
+        // --- Charts ---
+        function renderCharts(d) {
+            // Destroy old charts
+            Object.values(charts).forEach(c => c.destroy());
+            charts = {};
+
+            const chartDefaults = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+            };
+
+            // Funding Rate History
+            const deriv = d.derivatives;
+            if (deriv && deriv.funding && deriv.funding.recent_rates) {
+                const rates = [...deriv.funding.recent_rates].reverse();
+                const ctx = document.getElementById('fundingChart');
+                if (ctx) {
+                    charts.funding = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: rates.map(r => fmtTime(r.time / 1000)),
+                            datasets: [{
+                                data: rates.map(r => r.rate * 100),
+                                backgroundColor: rates.map(r => r.rate >= 0 ? '#0ecb8180' : '#f6465d80'),
+                                borderColor: rates.map(r => r.rate >= 0 ? '#0ecb81' : '#f6465d'),
+                                borderWidth: 1,
+                                borderRadius: 3,
+                            }]
+                        },
+                        options: {
+                            ...chartDefaults,
+                            scales: {
+                                x: { ticks: { color: '#5e6673', font: { size: 9 } }, grid: { display: false } },
+                                y: {
+                                    ticks: { color: '#5e6673', font: { size: 9 }, callback: v => v.toFixed(4) + '%' },
+                                    grid: { color: '#1e243320' },
+                                }
+                            },
+                            plugins: { ...chartDefaults.plugins, tooltip: { callbacks: { label: c => c.raw.toFixed(4) + '%' } } }
+                        }
+                    });
+                }
+            }
+
+            // Order Book Wall Chart
+            const ws = d.wall_strength;
+            if (ws) {
+                const ctx = document.getElementById('wallChart');
+                if (ctx) {
+                    charts.wall = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Bid Wall (Support)', 'Ask Wall (Resistance)'],
+                            datasets: [{
+                                data: [ws.bid_wall_volume, ws.ask_wall_volume],
+                                backgroundColor: ['#0ecb8140', '#f6465d40'],
+                                borderColor: ['#0ecb81', '#f6465d'],
+                                borderWidth: 2,
+                                borderRadius: 6,
+                            }]
+                        },
+                        options: {
+                            ...chartDefaults,
+                            indexAxis: 'y',
+                            scales: {
+                                x: { ticks: { color: '#5e6673', font: { size: 9 }, callback: v => v.toFixed(1) + ' BTC' }, grid: { color: '#1e243320' } },
+                                y: { ticks: { color: '#848e9c', font: { size: 10 } }, grid: { display: false } },
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Liquidation Doughnut
+            if (deriv && deriv.liquidations) {
+                const liq = deriv.liquidations;
+                const ctx = document.getElementById('liqChart');
+                if (ctx) {
+                    charts.liq = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Long Liqs', 'Short Liqs'],
+                            datasets: [{
+                                data: [liq.long_liquidation_usd, liq.short_liquidation_usd],
+                                backgroundColor: ['#0ecb8180', '#f6465d80'],
+                                borderColor: ['#0ecb81', '#f6465d'],
+                                borderWidth: 2,
+                            }]
+                        },
+                        options: {
+                            ...chartDefaults,
+                            cutout: '65%',
+                            plugins: {
+                                legend: { display: true, position: 'bottom', labels: { color: '#848e9c', font: { size: 10 }, padding: 12 } },
+                                tooltip: { callbacks: { label: c => c.label + ': ' + fmtCompact(c.raw) } }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Fetch and render signal history
+            fetchHistory();
+        }
+
+        // --- Signal History ---
+        async function fetchHistory() {
+            try {
+                const res = await fetch('/api/signal-history');
+                if (!res.ok) return;
+                const data = await res.json();
+                const history = data.history || [];
+
+                // History bars
+                const track = document.getElementById('history-track');
+                if (track && history.length > 0) {
+                    track.innerHTML = history.map(h => {
+                        const cls = (h.direction || 'skip').toLowerCase();
+                        const height = Math.max(8, (h.confidence || 0) * 36 + 4);
+                        return `<div class="history-bar ${cls}" style="height:${height}px" title="${fmtDate(h.timestamp)} | ${h.direction} (${((h.confidence||0)*100).toFixed(0)}%)"></div>`;
+                    }).join('');
+                }
+
+                // Price history chart
+                if (history.length > 1) {
+                    const ctx = document.getElementById('priceHistoryChart');
+                    if (ctx) {
+                        const prices = history.filter(h => h.btc_price);
+                        if (charts.priceHistory) charts.priceHistory.destroy();
+                        charts.priceHistory = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: prices.map(h => fmtTime(h.timestamp)),
+                                datasets: [{
+                                    data: prices.map(h => h.btc_price),
+                                    borderColor: '#f7931a',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    backgroundColor: '#f7931a10',
+                                    pointRadius: 3,
+                                    pointBackgroundColor: prices.map(h => {
+                                        const d = (h.direction||'skip').toLowerCase();
+                                        return d === 'up' ? '#0ecb81' : d === 'down' ? '#f6465d' : '#5e6673';
+                                    }),
+                                    pointBorderColor: 'transparent',
+                                    tension: 0.3,
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmtUSD(c.raw) } } },
+                                scales: {
+                                    x: { ticks: { color: '#5e6673', font: { size: 9 }, maxTicksLimit: 8 }, grid: { display: false } },
+                                    y: { ticks: { color: '#5e6673', font: { size: 9 }, callback: v => fmtUSD(v) }, grid: { color: '#1e243320' } },
+                                }
+                            }
+                        });
+                    }
+                }
+            } catch (e) { /* ignore history errors */ }
+        }
+
+        // --- Fetch Loop ---
+        async function fetchData() {
+            try {
+                const res = await fetch('/api/dashboard-data');
+                if (res.ok) {
+                    const data = await res.json();
+                    renderDashboard(data);
+                    document.getElementById('status-dot').style.background = 'var(--green)';
+                } else {
+                    document.getElementById('status-text').textContent = 'Waiting for first refresh...';
+                    document.getElementById('status-dot').style.background = 'var(--yellow)';
+                }
+            } catch (e) {
+                document.getElementById('status-text').textContent = 'Connection error';
+                document.getElementById('status-dot').style.background = 'var(--red)';
+            }
+        }
+
+        fetchData();
+        setInterval(fetchData, REFRESH_MS);
+    </script>
+</body>
+</html>

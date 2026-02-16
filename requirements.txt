@@ -1,0 +1,7 @@
+flask
+ccxt
+requests
+py-clob-client
+websocket-client
+textblob
+apscheduler
